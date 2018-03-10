@@ -10,7 +10,8 @@
 #include "oBeeSound.h"
 #include "Worker.h"
 
-#include "LinkedList.h"
+#include "lib/LinkedList.h"
+#include "lib/SparkJson/ArduinoJson.h"
 
 #ifndef _oBee_h
 #define _oBee_h
@@ -45,7 +46,7 @@ class oBee
         void Update();
         //void NotificationComplete();
 
-        void SetUpDrone(String str);
+        void SetUpDrone(JsonObject& json);
         void SetUpDroneSwitch(sensor oSensor);
         void SetUpDroneTemperature(sensor oSensor);
         void SetUpDroneDigital(sensor oSensor);

@@ -31,6 +31,8 @@ void DroneAmbientTemp::SetUpSensor(sensor oSensor)
     _sensor_event.triggerPublish = false;
 
     //dhtSensor = new DHT(_sensor.pin, "DHT11");
+    Log.info("Sensor Temp/Hum: " + String(_sensor.pin));
+    Log.info("B - Sensor Temp/Hum: " + String(oSensor.pin));
 
     dhtSensor.setup(_sensor.pin, 11);
     dhtSensor.begin();
@@ -127,11 +129,19 @@ float DroneAmbientTemp::read()
   float readValue = 0;
 
   if(_sensor.pin2 == 1)
+  {
     readValue = dhtSensor.getTempCelcius();
+    Log.info("Read AMBIENT-TEMP");
+  }
   else if (_sensor.pin2 == 2)
+  {
     readValue = dhtSensor.getHumidity();
+    Log.info("Read AMBIENT-HUM");
+  }
 
 
+  Log.info("Temp/Hum PIN: " + String(_sensor.pin));
+  Log.info("Temp/Hum VALUE: " + String(readValue));
   //Serial.println("Temperature: " + String(readValue));
 
   return readValue;

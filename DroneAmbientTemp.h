@@ -1,5 +1,5 @@
 
-#include "Adafruit_DHT.h"
+#include "lib/Adafruit_DHT.h"
 /* DroneDigital.h */
 #include "Drone.h"
 

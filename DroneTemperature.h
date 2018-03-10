@@ -1,8 +1,8 @@
 // This #include statement was automatically added by the Particle IDE.
-#include "spark-dallas-temperature.h"
+#include "lib/spark-dallas-temperature.h"
 
 // This #include statement was automatically added by the Particle IDE.
-#include "OneWire.h"
+#include "lib/OneWire.h"
 
 /* DroneSwitch.h */
 #include "Drone.h"

@@ -1,5 +1,5 @@
 #include "oBee.h"
-#include "ArduinoJson.h"
+#include "lib/SparkJson/ArduinoJson.h"
 
 /******************* SoftAp ***************************/
 #include "Particle.h"
@@ -74,6 +74,7 @@ void myPage(const char* url, ResponseCallback* cb, void* cbArg, Reader* body, Wr
 }
 
 STARTUP(softap_set_application_page_handler(myPage, nullptr));
+SYSTEM_THREAD(ENABLED);
 
 // Press SETUP for 3 seconds to make the Photon enter Listening mode
 // Navigate to http://192.168.0.1 to setup Wi-Fi
@@ -109,14 +110,21 @@ LinkedList<fieldValue*> fieldList = LinkedList<fieldValue*>(); //Listado de valo
 
 /************Setup**************/
 /*******************************/
+
+SerialLogHandler logHandler;
+
 void setup() {
 
-    //Serial.begin(9600);
+    Serial.begin(9600);
 
     //TODO: Testear modo de funcionamiento SEMI-AUTOMATICO
-    while (!Spark.connected()) {
-    Serial.print("+"); delay(100);
-    }
+    waitFor(Particle.connected, 10000);
+
+    if(Particle.connected)
+      Log.info("Particle CONNECTED");
+    else
+      Log.info("Particle NOT CONNECTED");
+
 
     Particle.subscribe(System.deviceID() +"/hook-response/Firebase", FireBaseHandler, MY_DEVICES);
 
@@ -125,7 +133,9 @@ void setup() {
 
     Particle.function("rgbTrigger",TriggerRGBNotification); //Funcion para ALARMA RGB
     Particle.function("bzzTrigger",TriggeBzzrNotification); //funcion para ALARMA Sonido
-    Particle.function("reset", Reset); //Funcion para configurar oBee (Toma valores desde Firebase)
+    Particle.function("reset", Reset); //Funcion para resetear
+
+    Particle.function("setup", SetupObee); //Se llama desde la Web para tomar nueva Configuracion
 
     ms = 0;
     msLast = 0;
@@ -133,17 +143,43 @@ void setup() {
     //Obtener ID de Obee
     oBeeID = System.deviceID();
 
-    //TODO: Revisar la EEPROM para definir si es necesario reconfigurar
-    SetupObee();
+    //Intenta tomar desde la EEPROM, sino, invoca a FireBase
+    SetupObee("nothing");
 }
 
 /******* Handler of Publish DEVICE Name********/
-void SetupObee()
+int SetupObee(String var)
 {
-  //Obtener configuracion
-  //String data =  "{\"id\":\"1\"}";
-  String dataFirebase = "{\"id\":\"" + oBeeID + "\"}";
-  Particle.publish("Firebase", dataFirebase, PRIVATE);
+  //Obtener de la EEPROM
+  int addr = 10;
+  String fullMessage;
+  char charBuf[1024];
+
+  EEPROM.get(addr, charBuf);
+
+  fullMessage = String(charBuf);
+
+  //Si esta VACIA la EEPROM - o se INVOCA reload (desde WEB) - Llamar a FireBase
+  if (fullMessage == "" || var=="reload")
+  {
+    Log.info("Setup Obee EEPROM: Empty - Calling FireBase");
+    //Obtener configuracion
+    //String data =  "{\"id\":\"1\"}";
+    String dataFirebase = "{\"id\":\"" + oBeeID + "\"}";
+    Particle.publish("Firebase", dataFirebase, PRIVATE);
+
+    //Limpar Drone y Workers
+    oBeeOne.ClearLists();
+  }
+  else
+  {
+    Log.info("Setup Obee EEPROM:" + fullMessage);
+    SetupObeeDetail(fullMessage);
+  }
+
+  Log.info("Setup Obee");
+
+  return 0;
 }
 
 /******* Handler of FireBase********/
@@ -153,38 +189,60 @@ String fullMessage;
 
 void FireBaseHandler(const char *event, const char *data) {
   // Handle the webhook response
-  Serial.println("***********FireBaseHandler***********");
-  Serial.println(String(data));
+  Log.info("***********FireBaseHandler***********");
+  Log.info(String(data));
 
   //Test if final data
   if (String(data).startsWith(strStart))
   {
     fullMessage = String(data);
-    Serial.println("***********START***********");
+    Log.info("***********START***********");
 
     //Si no termina, salir y esperar el resto
     if(!String(data).endsWith(strEnd))
     {
-      Serial.println("***********START AND END***********");
+      Log.info("***********CONTINUE***********");
       return;
+    }
+    else
+    {
+      Log.info("***********END***********");
     }
   }
   else if (!String(data).endsWith(strEnd))
   {
     //Agrego data al mensaje total
     fullMessage += String(data);
-    Serial.println("***********LOOP***********");
+    Log.info("***********LOOP***********");
     return;
     //Salgo de la rutina y se vuelve a llamar hasta que se completa el mensaje
   }
   else{
     //Completo el mensaje
     fullMessage += String(data);
-    Serial.println("***********END***********");
-
-    Serial.println("FullMessage: " + fullMessage);
+    Log.info("***********END***********");
   }
 
+  Log.info("FullMessage: " + fullMessage);
+
+  //Write to EEPROM
+  int addr = 10;
+  //int lenght = sizeof(fullMessage);
+  char charBuf[1024];
+  fullMessage.toCharArray(charBuf, 1024);
+
+  EEPROM.put(addr, charBuf);
+  Log.info("PUT EEPROM");
+
+  //String fullMessageEE;
+  //EEPROM.get(addr, fullMessageEE);
+  //Log.info("Setup Obee EEPROM:" + fullMessageEE);
+
+  SetupObeeDetail(fullMessage);
+}
+
+void SetupObeeDetail(String fullMessage)
+{
   StaticJsonBuffer<2048> jsonBuffer;
   //char *dataCopy = strdup(data);
   //char *dataCopy = fullMessage.c_str();
@@ -193,7 +251,7 @@ void FireBaseHandler(const char *event, const char *data) {
   JsonObject& root = jsonBuffer.parseObject(dataCopy);
 
   if (!root.success()) {
-    Serial.println("parseObject() failed");
+    Log.info("parseObject() failed - root");
     return;
   }
 
@@ -201,17 +259,17 @@ void FireBaseHandler(const char *event, const char *data) {
   int pos2 = fullMessage.indexOf(":");
 
   String strId = fullMessage.substring (pos1, pos2-1);   // get Name
-  Serial.println(strId);
+  Log.info("srtID:" + strId);
 
   JsonObject& oBeeJS = root[strId];  // query root
   if (!oBeeJS.success()) {
-    Serial.println("parseObject() failed - oBee");
+    Log.error("parseObject() failed - oBee");
     return;
   }
 
   //Get variables
-  publishTime = (int)oBeeJS["publishTime"];
-  //losantId = oBeeJS["losantId"];
+  publishTime = (int)oBeeJS["t"];
+
   String strNode;
 
   //Check for Drones
@@ -219,8 +277,18 @@ void FireBaseHandler(const char *event, const char *data) {
   {
     if (oBeeJS.containsKey("d" + String(i)))
     {
-        strNode = oBeeJS["d" + String(i)].asString();
-        oBeeOne.SetUpDrone(strNode);
+        //strNode = oBeeJS["d" + String(i)].asString();
+        JsonObject& oBeeNode = oBeeJS["d" + String(i)];  // query root
+        if (!oBeeNode.success()) {
+          Log.error("parseObject() failed - oBee Node");
+          return;
+        }
+
+        strNode = oBeeNode["d1"];
+
+        Log.info("Drone finded!");
+
+        oBeeOne.SetUpDrone(oBeeNode);
     }
   }
 
@@ -236,6 +304,8 @@ void FireBaseHandler(const char *event, const char *data) {
 
   //readyToPublish
   readyToPublish = true;
+
+
 }
 
 /*Public Function Particle API */
@@ -269,11 +339,11 @@ void loop() {
 
     oBeeOne.Update();
 
-    //HandleDroneSwitch();
-    //HandleDroneDigital();
-    //HandleDroneAnalog();
-    //HandleDroneTemperature();
-    //HandleDroneAmbientTemp();
+    HandleDroneSwitch();
+    HandleDroneDigital();
+    HandleDroneAnalog();
+    HandleDroneTemperature();
+    HandleDroneAmbientTemp();
 
     //Publish to the cloud
     //Hacer 1er loop de warmup
@@ -285,6 +355,7 @@ void loop() {
         Publish();
     }
 
+    //Log.info("Loop");
 
 }
 /*******************************/
@@ -312,7 +383,7 @@ void HandleDroneSwitch()
     if(ms - msLast > publishTime || oEvent.triggerPublish)
     {
       //Hay un evento para PUBLICAR
-      eventToPublish = true;
+      eventToPublish = oEvent.triggerPublish;
 
       sensor_event oEvent;
       droneSwitch->Publish(&oEvent);
@@ -347,12 +418,7 @@ void HandleDroneDigital()
   sensor oSensor;
   sensor_event oEvent;
 
-  //Serial.println("1");
-
   int listSize = oBeeOne.droneDigitalList.size();
-
-  //Serial.println("listSize: " + String(listSize));
-  //Serial.println("2");
 
   for (int h = 0; h < listSize; h++)
   {
@@ -375,12 +441,9 @@ void HandleDroneDigital()
     if(ms - msLast > publishTime || oEvent.triggerPublish)
     {
       //Hay un evento para PUBLICAR
-      eventToPublish = true;
+      eventToPublish = oEvent.triggerPublish;
 
       droneDigital->Publish(&oEvent);
-
-      //GetValue
-      //Serial.println("SetField-" + String(oSensor.fieldID) + ": "+ String(oEvent.value));
 
       //Add to collection - LOSANT
       fieldValue *oValue = new fieldValue();
@@ -409,35 +472,19 @@ void HandleDroneAnalog()
   sensor oSensor;
   sensor_event oEvent;
 
-  //Serial.println("1");
-  //delay(500);
-
   int listSize = oBeeOne.droneAnalogList.size();
-
-  //Serial.println("listSize: " + String(listSize));
-  //Serial.println("2");
-  //delay(500);
 
   for (int h = 0; h < listSize; h++)
   {
   DroneAnalog *droneAnalog;
 
-  //Serial.println("GetDrone: " + String(h));
-  //delay(500);
   droneAnalog = oBeeOne.droneAnalogList.get(h);
 
-  //Serial.println("3");
-  //delay(500);
   droneAnalog->GetSensor(&oSensor);
-  //Serial.println("4");
-  //delay(500);
   droneAnalog->GetEvent(&oEvent);
-  //Serial.println("5");
-  //delay(500);
 
   oBeeOne.HandleWorker(oSensor, oEvent);
   oBeeOne.HandleNotification(oSensor, oEvent);
-  //Serial.println("6");
 
   //IF Publish time
     if(ms - msLast > publishTime)
@@ -485,7 +532,7 @@ void HandleDroneTemperature()
       if(ms - msLast > publishTime || oEvent.triggerPublish)
       {
         //Hay un evento para PUBLICAR
-        eventToPublish = true;
+        eventToPublish = oEvent.triggerPublish;
 
         droneTemperature->Publish(&oEvent);
 
@@ -531,12 +578,12 @@ void HandleDroneAmbientTemp()
       if(ms - msLast > publishTime || oEvent.triggerPublish)
       {
           //Hay un evento para PUBLICAR
-        eventToPublish = true;
+        eventToPublish = oEvent.triggerPublish;
 
         droneAmbientTemp->Publish(&oEvent);
 
         //GetValue
-        //Serial.println("SetField-" + String(oSensor.fieldID) + ": "+ String(oEvent.value));
+        Log.info("SetField-" + String(oSensor.fieldID) + ": "+ String(oEvent.value));
 
         //Add to collection - LOSANT
         fieldValue *oValue = new fieldValue();
@@ -563,61 +610,108 @@ void Publish()
 {
     //Si paso el tiempo de Publicacion, todo lo que esta en la LISTA se publica.
     //Incluir tema de Bateria y Carga
-    if(ms - msLast > publishTime || eventToPublish)
+    if (Particle.connected)
     {
-        msLast = ms;
+      if(ms - msLast > publishTime || eventToPublish)
+      {
+          if (eventToPublish)
+            Log.info("PUBLISH: Event to Publsih");
+          else
+            Log.info("PUBLISH: Publish Time");
 
-        //TODO:
-        //Cambiar a buffer DINAMICO?
-        StaticJsonBuffer<1024> jsonBuffer;
-        JsonObject& root = jsonBuffer.createObject();
+          msLast = ms;
 
-        //TODO: Ver como usar el status
-        //root["status"] = 1;
-        //oBeeId
-        //root["i"] = oBeeID.c_str();
-        //losantId
-        //root["l"] = losantId.c_str();
+          StaticJsonBuffer<1024> jsonBuffer;
+          JsonObject& root = jsonBuffer.createObject();
 
-        //root["f1"] = "";
-        //root["f2"] = "";
-        //root["f3"] = "";
-        //root["f4"] = "";
-        //root["f5"] = "";
-        //root["f6"] = "";
-        //root["f7"] = "";
-        //root["f8"] = "";
-        //root["f9"] = "";
-        //root["f10"] = "";
+          //TODO: Mejorar esto!
+          for (int i = 0; i < fieldList.size(); i++)
+          {
+              fieldValue *oValue = fieldList.get(i);
 
-        for (int i = 0; i < fieldList.size(); i++)
-        {
-          //Serial.println("field-" + String(i) + ": " +  String(fieldList.get(i)));
-          fieldValue *oValue = fieldList.get(i);
+              if(oValue->fieldID == 1)
+              {
+                root["f1"] = "";
+              }
+              else if (oValue->fieldID == 2)
+              {
+                root["f2"] = "";
+              }
+              else if (oValue->fieldID == 3)
+              {
+                root["f3"] = "";
+              }
+              else if (oValue->fieldID == 4)
+              {
+                root["f4"] = "";
+              }
+              else if (oValue->fieldID == 5)
+              {
+                root["f5"] = "";
+              }
+              else if (oValue->fieldID == 6)
+              {
+                root["f6"] = "";
+              }
+              else if (oValue->fieldID == 2)
+              {
+                root["f2"] = "";
+              }
+              else if (oValue->fieldID == 7)
+              {
+                root["f7"] = "";
+              }
+              else if (oValue->fieldID == 8)
+              {
+                root["f8"] = "";
+              }
+              else if (oValue->fieldID == 9)
+              {
+                root["f9"] = "";
+              }
+              else if (oValue->fieldID == 10)
+              {
+                root["f10"] = "";
+              }
+          }
 
-          root["f" + String(oValue->fieldID)] = oValue->value;
+          for (int i = 0; i < fieldList.size(); i++)
+          {
+            fieldValue *oValue = fieldList.get(i);
+            //root["f" + String(oValue->fieldID)] = oValue->value;
+            int fieldID = oValue->fieldID;
+            float value = oValue->value;
 
-          //Serial.println("Field: " + String(oValue->fieldID) + " Value: " + String(oValue->value));
+            root["f" + String(fieldID)] = value;
 
-          //Delete object from Memory
-          delete oValue;
-        }
+            Log.info("Field: " + String(fieldID) + " Value: " + String(value));
 
-        // Get JSON string.
-        //TODO: Ver si el buffer puede ser DINAMICO.
-        char buffer[1024];
-        root.printTo(Serial);
-        root.printTo(buffer, sizeof(buffer));
+            //Delete object from Memory
+            delete oValue;
+          }
 
-        //Serial.println("---------------");
+          // Get JSON string.
+          char buffer[1024];
+          root.printTo(Serial);
+          root.printTo(buffer, sizeof(buffer));
 
-        //Publicacion - Losant toma el evento del API de Particle
-        Particle.publish("Publish", buffer , PRIVATE);
+          //Serial.println("---------------");
 
-        //Clear the values
-        fieldList.clear();
+          //Publicacion - Losant toma el evento del API de Particle
+          Particle.publish("Publish", buffer , PRIVATE);
 
-        eventToPublish = false;
+          //Clear the values
+          fieldList.clear();
 
+          eventToPublish = false;
+
+      }
+    }
+    else //Particle NOT connected
+    {
+      //Si no tenia conexion al momento de PUBLICAR - Elimar LISTA INFORMAR y esperar el siguiente evento
+      Log.error("CANT Publish - Particle NOT connected");
+      //Clear the values
+      fieldList.clear();
     }
 }

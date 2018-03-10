@@ -31,105 +31,55 @@ void oBee::Update()
     oSound.Update();
 }
 
-void oBee::SetUpDrone(String str)
+void oBee::SetUpDrone(JsonObject& root)
 {
-    Serial.println("SetupDrone-DETAIL");
-    Serial.println("FULL:" + str);
+    Log.info("SetupDrone-DETAIL");
 
-    //SetupDrone("ID:00-TYPE:SW-PIN1:D21-PIN2:000-BZZR:2-RGB:2-TIMER:1000-FIELDID:1-FIELDNAME:Temperature-MODE:P-WID:00-WTIMER:2000-INVERTED:1-NOTFIELD:5");
-    //SetupDrone("ID:00-TYPE:SW-PIN1:D21-PIN2:000-BZZR:2-RGB:2-TIMER:1000-FIELDID:1-FIELDNAME:Temperature-MODE:P-WID:00-WTIMER:2000-INVERTED:1-NOTFIELD:5");
-    //Add ICO
+    //int posID = str.indexOf(":");
 
-    int posID = str.indexOf("ID:");
-    int posType = str.indexOf("-TYPE:");
-    int posPIN1 = str.indexOf("-PIN1:");
-    int posPIN2 = str.indexOf("-PIN2:");
-    int posBZZR = str.indexOf("-BZZR:");
-    int posRGB = str.indexOf("-RGB:");
-    int posTimer = str.indexOf("-TIMER:");
-    int posFieldID = str.indexOf("-FIELDID:");
-    //int posFieldName = str.indexOf("-FIELDNAME:");
-    int posMode = str.indexOf("-MODE:");
-    int posWorkerID = str.indexOf("-WID:");
-    int posWTimer = str.indexOf("-WTIMER:");
-    int posInverted = str.indexOf("-INVERTED:");
-    int posNotification = str.indexOf("-NOTFIELD:");
+    //String strId = str.substring (1, posID);   // get 01
+    //Log.info("SetupDrone-ID:" + strId );
 
-    String strId = str.substring (posID+3, posType);   // get 01
-    //Serial.println("SetupDrone-ID:" + strId );
+    String charPin1 = root["p"].asString();
+    String charPin2 = root["a"].asString();
 
-    String strType = str.substring (posType+6, posPIN1);
-    //Serial.println("SetupDrone-TYPE:" + strType);
+    Log.info("Sensor AUX: " + charPin2);
 
-    String strPin1 = str.substring (posPIN1+6, posPIN2);
-    //Serial.println("SetupDrone-PIN1:" + strPin1);
+    //int droneID = strId.toInt();
+    int pin1 = GetPinValue(charPin1);
+    int pin2 = GetPinValue(charPin2);
+    int fieldID = root["f"];
+    int buzzerNotificationID = root["b"];
+    int rgbNotificationID = root["r"];
+    int notificationTime = root["x"];
+    int workerID = root["w"];
 
-    String strPin2 = str.substring (posPIN2+6, posBZZR);
-    //Serial.println("SetupDrone-PIN2:" + strPin2);
+    //int workerTimer = strWTimer.toInt();
+    int workerTimer = 0;
 
-    String strBzzr = str.substring (posBZZR+6, posRGB);
-    //Serial.println("SetupDrone-BZZR:" + strBzzr);
+    int inverted = root["i"];
+    int notificationfieldID = root["n"];
 
-    String strRGB = str.substring (posRGB+5, posTimer);
-    //Serial.println("SetupDrone-RGB:" + strRGB);
-
-    String strTimer = str.substring (posTimer+7, posFieldID);
-    //Serial.println("SetupDrone-TIMER:" + strTimer);
-
-    String strFieldId = str.substring (posFieldID+9, posMode);
-    //Serial.println("SetupDrone-FELDID:" + strFieldId);
-
-    //String strFieldName = str.substring (posFieldName+11, posMode);
-    //Serial.println("SetupDrone-FIELDNAME:" + strFieldName);
-
-    String strMode = str.substring (posMode+6, posWorkerID);
-    //Serial.println("SetupDrone-MODE:" + strMode);
-
-    String strWID = str.substring (posWorkerID+5, posWTimer);
-    //Serial.println("SetupDrone-WORKERID:" + strWID);
-
-    String strWTimer = str.substring (posWTimer+8, posInverted);
-    //Serial.println("SetupDrone-WORKERTIME:" + strWTimer);
-
-    String strInverted = str.substring (posInverted+10, posNotification);
-    //Serial.println("SetupDrone-INVERTED:" + strInverted);
-
-    String strNotification = str.substring (posNotification+10);
-    //Serial.println("SetupDrone-NOTIFICATION:" + strNotification);
-
-
-    int droneID = strId.toInt();
-    int pin1 = GetPinValue(strPin1);
-    int pin2 = GetPinValue(strPin2);
-    int fieldID = strFieldId.toInt();
-    int buzzerNotificationID = strBzzr.toInt();
-    int rgbNotificationID = strRGB.toInt();
-    int notificationTime = strTimer.toInt();
-    int workerID = strWID.toInt();
-    int workerTimer = strWTimer.toInt();
-    int inverted = strInverted.toInt();
-    int notificationfieldID = strNotification.toInt();
-
-
+    //Valor default
     sensor_type dtype = SENSOR_TYPE_SWITCH;
 
-    if(strType == "SW")
+    if(root["t"] == 1)
     {
         dtype = SENSOR_TYPE_SWITCH;
     }
-    else if (strType == "TEMP")
+    else if (root["t"] == 2)
     {
         dtype = SENSOR_TYPE_TEMP;
     }
-    else if (strType == "DIGITAL")
+    else if (root["t"] == 3)
     {
         dtype = SENSOR_TYPE_DIGITAL;
     }
-    else if (strType == "ANALOG")
+    else if (root["t"] == 4)
     {
         dtype = SENSOR_TYPE_ANALOG;
     }
-    else if (strType == "AMBIENTTEMP")
+    else if (root["t"] == 5)
     {
         dtype = SENSOR_TYPE_AMBIENT_TEMP;
     }
@@ -137,26 +87,24 @@ void oBee::SetUpDrone(String str)
     //TODO: droneMode dmode = dmPULSE;
     sensor_mode dmode = SENSOR_MODE_PULSE;
 
-    if(strMode == "P")
-    {
-        dmode = SENSOR_MODE_PULSE;
-    }
-    else
-    {
-        dmode = SENSOR_MODE_TIME;
-    }
+
+    dmode = SENSOR_MODE_PULSE;
 
     sensor oSensor;
 
-    oSensor.droneID = droneID;
+    //oSensor.droneID = droneID;
     oSensor.type = dtype;
     oSensor.pin = pin1;
     oSensor.pin2 = pin2;
+
+    Log.info("Sensor PIN: " + String(oSensor.pin));
+    Log.info("Sensor PIN2: " + String(oSensor.pin2));
+
     oSensor.buzzerNotificationID = buzzerNotificationID;
     oSensor.rgbNotificationID = rgbNotificationID;
     oSensor.notificationElapsedTime = notificationTime;
     oSensor.fieldID = fieldID;
-    //oSensor.fieldName = strFieldName;
+
     oSensor.mode = dmode;
     oSensor.workerID = workerID;
     oSensor.workerElapsedTime = workerTimer;
@@ -164,18 +112,18 @@ void oBee::SetUpDrone(String str)
     if(inverted == 1)
     {
       oSensor.inverted = true;
-      Serial.println("Inverted TRUE: " + String(oSensor.inverted));
+      Log.info("Inverted TRUE: " + String(oSensor.inverted));
     }
     else
     {
       oSensor.inverted = false;
-      Serial.println("Inverted FALSE: " + String(oSensor.inverted));
+      Log.info("Inverted FALSE: " + String(oSensor.inverted));
     }
 
     oSensor.notificationFieldID = notificationfieldID;
 
 
-    Serial.println("SensorPIN: " + String(pin1));
+    Log.info("SensorPIN: " + String(oSensor.pin));
 
     switch (oSensor.type)
     {

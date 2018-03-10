@@ -1,7 +1,7 @@
 #ifndef _oBeeSound_h
 #define _oBeeSound_h
 
-#include "NonBlockingRtttl.h"
+#include "lib/NonBlockingRtttl.h"
 
 class oBeeSound
 {
