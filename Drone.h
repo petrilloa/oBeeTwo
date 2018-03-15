@@ -17,6 +17,8 @@ typedef struct
     float acumulatedValue;       //sensor acumulatedValue (between Publish)
     bool changed;               //value changed since last read
 
+    float lastPublishedValue = 0;     //LastPublished Value
+
     int timestamp;              //LastRead
     int lastChange;             //Elapsed time since last change
 
@@ -25,6 +27,8 @@ typedef struct
     float acumulatedNotification; //Number of times Notification has fired
 
     bool triggerPublish;        //If must trigger a Publish to cloud (sin importar si paso el tiempo)
+    bool firstTriggerPublish = true;   //Only Fire ONE time per Notification.
+
 
 } sensor_event;
 
@@ -38,7 +42,7 @@ typedef struct
     int rgbNotificationID;          /**< Has a RGB ID */
     int notificationElapsedTime;    /**< Notification en elapsed Time */
 
-    int fieldID; 
+    int fieldID;
     int notificationFieldID;
     sensor_mode mode;                /**< Pulse or Time Sensor*/
 

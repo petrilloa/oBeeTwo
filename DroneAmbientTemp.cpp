@@ -93,7 +93,7 @@ void DroneAmbientTemp::GetEvent(sensor_event *oEvent)
 
   //Para Tempertura, si hay un delta de 5°, es NECESARIO Publicar!
   //Usa el valor absoluto
-  if(abs(_sensor_event.value -_sensor_event.lastValue) > 5)
+  if(abs(_sensor_event.value -_sensor_event.lastPublishedValue) > 5)
   {
       _sensor_event.triggerPublish = true;
   }
@@ -108,6 +108,9 @@ void DroneAmbientTemp::GetEvent(sensor_event *oEvent)
   oEvent->lastValue = _sensor_event.lastValue;
   oEvent->acumulatedValue = _sensor_event.acumulatedValue;
   oEvent->changed = _sensor_event.changed;
+
+  oEvent->lastPublishedValue = _sensor_event.lastPublishedValue;
+
   oEvent->timestamp = _sensor_event.timestamp;
   oEvent->lastChange = _sensor_event.lastChange;
   oEvent->triggerNotification = _sensor_event.triggerNotification;
@@ -161,4 +164,6 @@ int DroneAmbientTemp::activeFor(int ms)
 void DroneAmbientTemp::Publish(sensor_event *oEvent)
 {
       oEvent->value = _sensor_event.value;
+      //Save LastPublished
+      _sensor_event.lastPublishedValue = _sensor_event.value;
 }

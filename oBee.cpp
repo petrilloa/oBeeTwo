@@ -55,9 +55,9 @@ void oBee::SetUpDrone(JsonObject& root)
     int workerID = root["w"];
 
     //int workerTimer = strWTimer.toInt();
-    int workerTimer = 0;
+    int workerTimer = root["y"];
 
-    int inverted = root["i"];
+    int inverted = root["z"];
     int notificationfieldID = root["n"];
 
     //Valor default
@@ -107,6 +107,8 @@ void oBee::SetUpDrone(JsonObject& root)
 
     oSensor.mode = dmode;
     oSensor.workerID = workerID;
+    Log.info("WorkerID: " + String(workerID));
+
     oSensor.workerElapsedTime = workerTimer;
 
     if(inverted == 1)
@@ -303,51 +305,26 @@ int oBee::GetPinValue(String strPIN)
     return pinValue;
 }
 
-void oBee::SetUpWorker(String str)
+void oBee::SetUpWorker(JsonObject& root)
 {
     //CreateWorker("ID:00-PIN:D11-BZZR:1-RGB:1-TYPE:M-TIMER:005");
-    Serial.println("SetupWorker-DETAIL");
-    Serial.println("FULL:" + str);
+    Log.info("SetupWorker-DETAIL");
 
-    int posID = str.indexOf("ID:");
-    int posPIN = str.indexOf("-PIN:");
-    int posBZZR = str.indexOf("-BZZR:");
-    int posRGB = str.indexOf("-RGB:");
-    int posType = str.indexOf("-TYPE:");
-    int posTimer = str.indexOf("-TIMER:");
-    //int posTallbackID = str.indexOf("-TALLBACKID:");
+    //String charPin1 = root["p"].asString();
+    //String charPin2 = root["a"].asString()
 
+    String charPin1 = root["p"].asString();
 
-    String strId = str.substring (posID+3, posPIN);   // get 01
-    Serial.println("SetupWorker-ID:" + strId );
+    int workerID = root["i"];
+    int pin = GetPinValue(charPin1);
 
-    String strPin = str.substring (posPIN+5, posBZZR);
-    Serial.println("SetupWorker-PIN:" + strPin);
-
-    String strBzzr = str.substring (posBZZR+6, posRGB);
-    Serial.println("SetupWorker-BZZR:" + strBzzr);
-
-    String strRGB = str.substring (posRGB+5, posType);
-    Serial.println("SetupWorker-RGB:" + strRGB);
-
-    String strType = str.substring (posType+6, posTimer);
-    Serial.println("SetupWorker-TYPE:" + strType);
-
-    String strTimer = str.substring (posTimer+7);
-    Serial.println("SetupWorker-TIMER:" + strTimer);
-
-    //String strTallBackID = str.substring (posTallbackID+9);
-    //Serial.println("SetupWorker-TALLBACKID:" + strTallBackID);
-
-    int workerID = strId.toInt();
-    int pin = GetPinValue(strPin);
     //String tallbackID = strTallBackID;
-    int buzzerNotificationID = strBzzr.toInt();
-    int rgbNotificationID = strRGB.toInt();
-    int autoTimer = strTimer.toInt();
+    int buzzerNotificationID = root["b"];
+    int rgbNotificationID = root["r"];
+    int autoTimer = root["x"];
+    String strType = root["t"].asString();
 
     worker_type wtype = WORKER_MANUAL;
-
 
     if(strType == "M")
     {
@@ -370,7 +347,7 @@ void oBee::SetUpWorker(String str)
 
     worker->SetUpWorker();
 
-    Serial.println("WorkerID: " + String(worker->workerID));
+    Log.info("WorkerID: " + String(worker->workerID));
 
     workerList.add(worker->workerID-1, worker);
 
@@ -380,7 +357,7 @@ void oBee::HandleWorker(sensor oSensor, sensor_event oEvent)
 {
     if (oSensor.workerID != 0) //Check if has a Worker asociated
     {
-      //Serial.println("Worker: " + String(oSensor.workerID));
+      //Log.info("Worker: " + String(oSensor.workerID));
       int active = -1;
       int workerAutoOff = 0;
 
@@ -390,12 +367,12 @@ void oBee::HandleWorker(sensor oSensor, sensor_event oEvent)
       if(oEvent.triggerWorker)
       {
           active = 1;
-          //Serial.println("Active 1");
+          //Log.info("Worker Active 1");
       }
       else if (!oEvent.triggerWorker && workerAutoOff == 0) //if value is 0 -> OFF
       {
          active = 0;
-         //Serial.println("Active 0");
+         //Log.info("Active 0");
       }
 
       if (active == 1)

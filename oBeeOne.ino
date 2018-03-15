@@ -284,10 +284,7 @@ void SetupObeeDetail(String fullMessage)
           return;
         }
 
-        strNode = oBeeNode["d1"];
-
         Log.info("Drone finded!");
-
         oBeeOne.SetUpDrone(oBeeNode);
     }
   }
@@ -297,8 +294,16 @@ void SetupObeeDetail(String fullMessage)
   {
     if (oBeeJS.containsKey("w" + String(i)))
     {
-        strNode = oBeeJS["w" + String(i)].asString();
-        oBeeOne.SetUpWorker(strNode);
+        //strNode = oBeeJS["w" + String(i)].asString();
+        JsonObject& oBeeWorker = oBeeJS["w" + String(i)];  // query root
+        if (!oBeeWorker.success()) {
+          Log.error("parseObject() failed - oBee Worker");
+          return;
+        }
+
+        Log.info("Worker finded!");
+
+        oBeeOne.SetUpWorker(oBeeWorker);
     }
   }
 
@@ -384,6 +389,7 @@ void HandleDroneSwitch()
     {
       //Hay un evento para PUBLICAR
       eventToPublish = oEvent.triggerPublish;
+    
 
       sensor_event oEvent;
       droneSwitch->Publish(&oEvent);

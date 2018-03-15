@@ -16,7 +16,7 @@ class DroneSwitch : public Drone
         virtual void GetEvent(sensor_event*);
         virtual void GetSensor(sensor*);
         virtual void Publish(sensor_event*);
-
+        
 
     private:
 

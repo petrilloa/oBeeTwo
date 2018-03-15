@@ -75,29 +75,49 @@ void DroneSwitch::GetEvent(sensor_event *oEvent)
     {
       _sensor_event.triggerNotification = true;
 
+      if(_sensor_event.firstTriggerPublish)
+      {
+          //Solo se PUBLICA ante la primera NOTIFICACION, Luego se van acumulando las notificaciones y permanece encendido para poder NOTIFICAR por RGG, BZZR
+          _sensor_event.triggerPublish = true;
+          Log.info("Drone Trigger Publish");
+          _sensor_event.firstTriggerPublish = false;
+      }
+      else
+      {
+          _sensor_event.triggerPublish = false;
+      }
+
       if (!_sensor_event.changed)
       {
         _sensor_event.acumulatedNotification = 1;
-        //Solo se PUBLICA ante la primera NOTIFICACION, Luego se van acumulando las notificaciones y permanece encendido para poder NOTIFICAR por RGG, BZZR
-        _sensor_event.triggerPublish = true;
+        //Log.info("Drone NOT Trigger Publish");
       }
       else
+      {
         _sensor_event.acumulatedNotification = _sensor_event.acumulatedNotification + 1;
 
-    }
+      }
 
+    }
     else
     {
       _sensor_event.triggerNotification = false;
       _sensor_event.triggerPublish = false;
+      _sensor_event.firstTriggerPublish = true;
     }
 
 
     //Check worker
     if(_sensor.workerID != -1 && activeFor(_sensor.workerElapsedTime))
-        _sensor_event.triggerWorker = true;
+    {
+      _sensor_event.triggerWorker = true;
+      //Log.info("Worker trigger");
+    }
     else
-        _sensor_event.triggerWorker = false;
+    {
+      _sensor_event.triggerWorker = false;
+    }
+
 
     //Copy event
     /* Copy object to return */
@@ -186,7 +206,7 @@ void DroneSwitch::Publish(sensor_event *oEvent)
 {
     //TODO: CHECK!!!
     if(_sensor.mode == SENSOR_MODE_PULSE)
-          oEvent->value = _sensor_event.acumulatedValue;
+        oEvent->value = _sensor_event.acumulatedValue;
     else
         oEvent->value = _sensor_event.value;
 

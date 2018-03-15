@@ -74,21 +74,36 @@ void DroneDigital::GetEvent(sensor_event *oEvent)
     {
       _sensor_event.triggerNotification = true;
 
+      if(_sensor_event.firstTriggerPublish)
+      {
+          //Solo se PUBLICA ante la primera NOTIFICACION, Luego se van acumulando las notificaciones y permanece encendido para poder NOTIFICAR por RGG, BZZR
+          _sensor_event.triggerPublish = true;
+          Log.info("Drone Trigger Publish");
+          _sensor_event.firstTriggerPublish = false;
+      }
+      else
+      {
+          _sensor_event.triggerPublish = false;
+      }
+
       //Para digitales, si se produce una NOTIFICACION, es NECESARIO Publicar!
       if (!_sensor_event.changed)
       {
         _sensor_event.acumulatedNotification = 1;
-        //Solo se PUBLICA ante la primera NOTIFICACION, Luego se van acumulando las notificaciones y permanece encendido para poder NOTIFICAR por RGG, BZZR
-        _sensor_event.triggerPublish = true;
       }
       else
+      {
         _sensor_event.acumulatedNotification = _sensor_event.acumulatedNotification + 1;
+          //Solo se PUBLICA ante la primera NOTIFICACION, Luego se van acumulando las notificaciones y permanece encendido para poder NOTIFICAR por RGG, BZZR
+        _sensor_event.triggerPublish = true;
+      }
     }
 
     else
     {
       _sensor_event.triggerNotification = false;
       _sensor_event.triggerPublish = false;
+      _sensor_event.firstTriggerPublish = true;
     }
 
 

@@ -88,7 +88,7 @@ class oBee
 
         int GetPinValue(String strPIN);
 
-        void SetUpWorker(String str);
+        void SetUpWorker(JsonObject& json);
         LinkedList<Worker*> workerList = LinkedList<Worker*>();
 
 
