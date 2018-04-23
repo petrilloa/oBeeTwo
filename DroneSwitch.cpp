@@ -95,7 +95,6 @@ void DroneSwitch::GetEvent(sensor_event *oEvent)
       else
       {
         _sensor_event.acumulatedNotification = _sensor_event.acumulatedNotification + 1;
-
       }
 
     }

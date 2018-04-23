@@ -20,7 +20,7 @@ class DroneDigital : public Drone
 
         sensor _sensor;
         sensor_event _sensor_event;
-        int _dbTime = 50;
+        int _dbTime = 150;
 
         float read();
         int wasActive();

@@ -100,10 +100,12 @@ void oBee::SetUpDrone(JsonObject& root)
     Log.info("Sensor PIN: " + String(oSensor.pin));
     Log.info("Sensor PIN2: " + String(oSensor.pin2));
 
+
     oSensor.buzzerNotificationID = buzzerNotificationID;
     oSensor.rgbNotificationID = rgbNotificationID;
     oSensor.notificationElapsedTime = notificationTime;
     oSensor.fieldID = fieldID;
+    Log.info("Sensor FieldID: " + String(oSensor.fieldID));
 
     oSensor.mode = dmode;
     oSensor.workerID = workerID;
@@ -123,9 +125,6 @@ void oBee::SetUpDrone(JsonObject& root)
     }
 
     oSensor.notificationFieldID = notificationfieldID;
-
-
-    Log.info("SensorPIN: " + String(oSensor.pin));
 
     switch (oSensor.type)
     {

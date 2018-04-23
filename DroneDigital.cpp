@@ -13,6 +13,7 @@ void DroneDigital::SetUpSensor(sensor oSensor)
     _sensor.buzzerNotificationID = oSensor.buzzerNotificationID;
     _sensor.rgbNotificationID = oSensor.rgbNotificationID;
     _sensor.notificationElapsedTime = oSensor.notificationElapsedTime;
+    _sensor.fieldID = oSensor.fieldID;
     _sensor.mode = oSensor.mode;
     _sensor.workerID = oSensor.workerID;
     _sensor.workerElapsedTime = oSensor.workerElapsedTime;
@@ -94,16 +95,15 @@ void DroneDigital::GetEvent(sensor_event *oEvent)
       else
       {
         _sensor_event.acumulatedNotification = _sensor_event.acumulatedNotification + 1;
-          //Solo se PUBLICA ante la primera NOTIFICACION, Luego se van acumulando las notificaciones y permanece encendido para poder NOTIFICAR por RGG, BZZR
-        _sensor_event.triggerPublish = true;
       }
     }
-
     else
     {
       _sensor_event.triggerNotification = false;
       _sensor_event.triggerPublish = false;
       _sensor_event.firstTriggerPublish = true;
+
+      //Log.info("Drone Trigger RESET");
     }
 
 

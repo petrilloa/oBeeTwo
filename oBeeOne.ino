@@ -389,13 +389,13 @@ void HandleDroneSwitch()
     {
       //Hay un evento para PUBLICAR
       eventToPublish = oEvent.triggerPublish;
-    
 
       sensor_event oEvent;
       droneSwitch->Publish(&oEvent);
 
       //GetValue
       //Serial.println("SetField-" + String(oSensor.fieldID) + ": "+ String(oEvent.value));
+      Log.info("SetField-" + String(oSensor.fieldID) + ": "+ String(oEvent.value));
 
       //Add to collection - LOSANT
       fieldValue *oValue = new fieldValue();
