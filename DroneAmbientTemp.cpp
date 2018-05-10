@@ -17,6 +17,8 @@ void DroneAmbientTemp::SetUpSensor(sensor oSensor)
     _sensor.mode = oSensor.mode;
     _sensor.workerID = oSensor.workerID;
     _sensor.workerElapsedTime = oSensor.workerElapsedTime;
+    _sensor.notificationFieldID = oSensor.notificationFieldID;
+    _sensor.inverted = oSensor.inverted;
 
     pinMode(_sensor.pin, INPUT);
 
@@ -31,8 +33,7 @@ void DroneAmbientTemp::SetUpSensor(sensor oSensor)
     _sensor_event.triggerPublish = false;
 
     //dhtSensor = new DHT(_sensor.pin, "DHT11");
-    Log.info("Sensor Temp/Hum: " + String(_sensor.pin));
-    Log.info("B - Sensor Temp/Hum: " + String(oSensor.pin));
+    Log.info("Sensor Temp/Hum: " + String(_sensor.pin));    
 
     dhtSensor.setup(_sensor.pin, 11);
     dhtSensor.begin();
@@ -70,13 +71,13 @@ void DroneAmbientTemp::GetEvent(sensor_event *oEvent)
 
   //Serial.println("GetEventTemp_1");
   //Read the sensor to get Value and Times
-  float tempTemporal =  read();
+  float tempTemporal =  0;
+  float humidityTemporal = 0;
 
+  read(tempTemporal, humidityTemporal);
   //Read error
-  if (tempTemporal != -127)
-    _sensor_event.value = tempTemporal;
-  else
-    _sensor_event.value =  _sensor_event.lastValue;
+  _sensor_event.value = (float)tempTemporal;
+  _sensor_event.acumulatedNotification = (float)humidityTemporal;
 
   //TODO:
   //Check notification
@@ -116,38 +117,25 @@ void DroneAmbientTemp::GetEvent(sensor_event *oEvent)
   oEvent->triggerNotification = _sensor_event.triggerNotification;
   oEvent->triggerWorker = _sensor_event.triggerWorker;
 
+  oEvent->acumulatedNotification = _sensor_event.acumulatedNotification;
+  oEvent->triggerPublish = _sensor_event.triggerPublish;
+
   //Serial.println("_Event value: " + String(_sensor_event.value));
   //Serial.println("_Event acumulated: " + String(_sensor_event.acumulatedValue));
 
 }
 
-float DroneAmbientTemp::read()
+void DroneAmbientTemp::read(float &temp, float &humidity)
 {
-  //Serial.println("TempRead_1");
-  //Serial.println("Pin2: " + String(_sensor.pin2));
-  //delay(1000);
 
-  // Sensor readings may also be up to 2 seconds 'old' (its a
-  // very slow sensor)
-  float readValue = 0;
+  temp = dhtSensor.getTempCelcius();
+  Log.info("Read AMBIENT-TEMP");
+  Log.info("Temp/Hum TEMP: " + String(temp));
 
-  if(_sensor.pin2 == 1)
-  {
-    readValue = dhtSensor.getTempCelcius();
-    Log.info("Read AMBIENT-TEMP");
-  }
-  else if (_sensor.pin2 == 2)
-  {
-    readValue = dhtSensor.getHumidity();
-    Log.info("Read AMBIENT-HUM");
-  }
+  humidity = dhtSensor.getHumidity();
+  Log.info("Read AMBIENT-HUM");
+  Log.info("Temp/Hum HUM: " + String(humidity));
 
-
-  Log.info("Temp/Hum PIN: " + String(_sensor.pin));
-  Log.info("Temp/Hum VALUE: " + String(readValue));
-  //Serial.println("Temperature: " + String(readValue));
-
-  return readValue;
 
 }
 
@@ -164,6 +152,7 @@ int DroneAmbientTemp::activeFor(int ms)
 void DroneAmbientTemp::Publish(sensor_event *oEvent)
 {
       oEvent->value = _sensor_event.value;
+      oEvent->acumulatedNotification = _sensor_event.acumulatedNotification;
       //Save LastPublished
       _sensor_event.lastPublishedValue = _sensor_event.value;
 }

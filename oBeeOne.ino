@@ -590,6 +590,8 @@ void HandleDroneAmbientTemp()
 
         //GetValue
         Log.info("SetField-" + String(oSensor.fieldID) + ": "+ String(oEvent.value));
+        //GetValue
+        Log.info("SetField-" + String(oSensor.notificationFieldID) + ": "+ String(oEvent.acumulatedNotification));
 
         //Add to collection - LOSANT
         fieldValue *oValue = new fieldValue();
@@ -598,6 +600,15 @@ void HandleDroneAmbientTemp()
         oValue->value = oEvent.value;
 
         fieldList.add(oValue);
+
+        //Add to collection - LOSANT
+        fieldValue *oValueH = new fieldValue();
+
+        //AmbientTemp uses NotificacionField
+        oValueH->fieldID = oSensor.notificationFieldID;
+        oValueH->value = oEvent.acumulatedNotification;
+
+        fieldList.add(oValueH);
       }
     }
   }

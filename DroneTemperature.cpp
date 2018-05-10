@@ -120,6 +120,9 @@ void DroneTemperature::GetEvent(sensor_event *oEvent)
     oEvent->triggerNotification = _sensor_event.triggerNotification;
     oEvent->triggerWorker = _sensor_event.triggerWorker;
 
+    oEvent->acumulatedNotification = _sensor_event.acumulatedNotification;
+    oEvent->triggerPublish = _sensor_event.triggerPublish;
+
     //Serial.println("_Event value: " + String(_sensor_event.value));
     //Serial.println("_Event acumulated: " + String(_sensor_event.acumulatedValue));
 
