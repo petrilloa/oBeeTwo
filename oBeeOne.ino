@@ -389,7 +389,7 @@ void HandleDroneSwitch()
     {
       //Hay un evento para PUBLICAR
       eventToPublish = oEvent.triggerPublish;
-    
+
 
       sensor_event oEvent;
       droneSwitch->Publish(&oEvent);
@@ -658,10 +658,6 @@ void Publish()
               else if (oValue->fieldID == 6)
               {
                 root["f6"] = "";
-              }
-              else if (oValue->fieldID == 2)
-              {
-                root["f2"] = "";
               }
               else if (oValue->fieldID == 7)
               {
