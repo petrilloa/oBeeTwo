@@ -19,12 +19,12 @@
 const int PIN_Buzzer = D0;
 const int PIN_RGB = D1;
 
-const int PIN_D11 = D2;
-const int PIN_D12 = D3;
-const int PIN_D21 = D5;
-const int PIN_D22 = D4;
-const int PIN_D31 = D7;
-const int PIN_D32 = D6;
+const int PIN_D11 = D3;
+const int PIN_D12 = D2;
+const int PIN_D21 = D4;
+const int PIN_D22 = D5;
+const int PIN_D31 = D6;
+const int PIN_D32 = D7;
 const int PIN_A11 = A1;
 const int PIN_A12 = A0;
 const int PIN_A21 = A3;

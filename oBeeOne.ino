@@ -85,7 +85,7 @@ oBee oBeeOne;
 double publishTime = 60000;
 //Usado para los sensores de temperatura. Debe ser menor o igual al PublishTime.
 //Se utiliza si el tiempo de Publish es muy grande, para detectar "EVENTOS"
-double poolingTime = 30000;
+double poolingTime = 60000;
 
 unsigned long ms;
 unsigned long msLast;
@@ -269,6 +269,7 @@ void SetupObeeDetail(String fullMessage)
 
   //Get variables
   publishTime = (int)oBeeJS["t"];
+  //publishTime = 30000;
 
   String strNode;
 
@@ -631,8 +632,10 @@ void Publish()
     {
       if(ms - msLast > publishTime || eventToPublish)
       {
+          //Log.info("PUBLISHTIME: " + String(publishTime));
+
           if (eventToPublish)
-            Log.info("PUBLISH: Event to Publsih");
+            Log.info("PUBLISH: Event to Publish");
           else
             Log.info("PUBLISH: Publish Time");
 
@@ -669,10 +672,6 @@ void Publish()
               else if (oValue->fieldID == 6)
               {
                 root["f6"] = "";
-              }
-              else if (oValue->fieldID == 2)
-              {
-                root["f2"] = "";
               }
               else if (oValue->fieldID == 7)
               {
